@@ -1,64 +1,57 @@
-library(shiny)
-library(shinydashboard)
-library(ggplot2)
-library(grid)
-options(scipen = 999)
-
-source("treta.R")
+source("Treta.R")
 
 ui <- shinyUI(dashboardPage(
-    
-        dashboardHeader(title = "Teste CFAMGBH", 
-                    titleWidth = 550),
-    
+        
+        dashboardHeader(title = "Teste CFAMGBH - 2015", 
+                        titleWidth = 550),
+        
         dashboardSidebar(
-        
-                selectInput("ano_dos_dados", 
-                    "Dados do ano:", 
-                    c("2015" = "2015", 
-                      "2016" = "2016", 
-                      "2017" = "2017")),
-        
-                checkboxGroupInput("tipo_de_programa",
-                    "Selecionar o(s) tipo(s) de programas:",
-                    c("Sustentador" = "Sustentador",
-                    "Associado" = "Associado",
-                    "Apoio Administrativo" = "Apoio Administrativo")),
-        
-                checkboxGroupInput("area_de_resultado",
-                           "Selecionar a(s) area(s) de resultado:",
-                           c("1" = "1",
-                           "2" = "2",
-                           "3" = "3",
-                           "4" = "4",
-                           "5" = "5",
-                           "6" = "6",
-                           "7" = "7",
-                           "8" = "8",
-                           "9" = "9",
-                           "10" = "10",
-                           "11" = "11",
-                           "12" = "12")),
                 
+                selectInput("ano_dos_dados", 
+                            "Dados do ano:", 
+                            c("2015" = "2015", 
+                              "2016" = "2016", 
+                              "2017" = "2017")),
+                
+                checkboxGroupInput("tipo_de_programa",
+                                   "Selecionar o(s) tipo(s) de programas:",
+                                   c("Sustentador" = "Sustentador",
+                                     "Associado" = "Associado",
+                                     "Apoio Administrativo" = "Apoio Administrativo")),
+                
+                checkboxGroupInput("area_de_resultado",
+                                   "Selecionar a(s) area(s) de resultado:",
+                                   c("Cidade Saudavel" = "1",
+                                     "Educacao" = "2",
+                                     "Cidade com Mobilidade" = "3",
+                                     "Cidade Segura" = "4",
+                                     "Prosperidade" = "5",
+                                     "Modernidade" = "6",
+                                     "Todas as Vilas Vivas" = "7",
+                                     "Cidade Compartilhada" = "8",
+                                     "Cidade Sustentavel" = "9",
+                                     "Cidade de Todos" = "10",
+                                     "Cultura" = "11",
+                                     "Integracao Metropolitana" = "12")),
                 radioButtons("dimensao_escolhida",
                              "Selecionar a dimensao a ser analisada:",
-                             c("Financeira" = "indicadores_agrupamento_Financeira",
-                               "Fisica" = "indicadores_agrupamento_Fisica"))
-        
+                             c("Financeira" = "Financeira",
+                               "Fisica" = "Fisica"))
+                
         ),
-    
+        
         dashboardBody(
-                        
+                                
                 fluidRow(
-            
-                        box(title = "Distribution Preview", 
-                            status = "primary",
-                            width = 4,
-                            height = 300,
-                            solidHeader = TRUE,
-                            plotOutput("distPlot")
+        
+                        box(title = "Estatisticas", 
+                        status = "primary",
+                        width = 4,
+                        height = 300,
+                        solidHeader = TRUE,
+                        htmlOutput(outputId = "Estatisticas")
                         ),
-            
+        
                         tabBox(title = NULL,
                                side = "left", 
                                width = 8,
@@ -81,75 +74,73 @@ ui <- shinyUI(dashboardPage(
                                              As faixas mais importantes sao aquelas em que as metas e execucoes estao zeradas. Em seguida, destaca-se a faixa de equilibrio, entre 0.7 e 1.3. As demais faixas apresentam situacoes de desequilibrio, em que a subestimacao ou superestimacao de metas. </p></center>")),
                                tabPanel("Grafico", 
                                         HTML("<center><p>Enfim, foi plotado um grafico que ilustra o numero de sub-acoes em cada faixa de resultado, de acordo com os criterios selecionados pelo usuario (tipo de programa, area de resultado e dimensao analisada).</p></center>"))
-                         )
+                        )
                 ),
+
+                fluidRow(
         
-                fluidRow(
-            
-                        box(title = "Frequencia das Sub-Acoes por Classificacao do Indicador", 
-                            status = "primary",
-                            width = 12,
-                            height = 350,
-                            solidHeader = TRUE,
-                            plotOutput("Plot"))
-            
+                        box(title = "Escalonamento das Sub-Acoes em Faixas de Avaliacao", 
+                        status = "primary",
+                        width = 12,
+                        height = 350,
+                        solidHeader = TRUE,
+                        plotOutput("Plot")
+                        )
+        
                 ),
-                
+
                 fluidRow(
-                        
+        
                         box(title = "Visualizar Sub-Acoes:",
-                            status = "primary",
-                            width = 12,
-                            solidHeader = TRUE,
-                            dataTableOutput(outputId="dTable"))
-                        
+                        status = "primary",
+                        width = 12,
+                        solidHeader = TRUE,
+                        dataTableOutput(outputId="dTable")
+                        )
+        
                 )
-                        
+
         )
+                        
 ))
 
 
 server <- shinyServer(function(input, output) {
         
-        dataTable <- reactive({
         
+        dataTable <- reactive({
                 
                 TESTE_filtro(a, input$area_de_resultado, input$tipo_de_programa, input$dimensao_escolhida)
-        
                 
         })
-    
+        
         
         output$dTable <- renderDataTable({
-        
+                
                 dataTable()
-        
+                
         })
-    
         
-        output$Plot <- renderPlot({
-                
-                if(input$dimensao_escolhida == "indicadores_agrupamento_Financeira"){
         
-                        ggplot(dataTable(), 
-                               aes(x = indicadores_agrupamento_Financeira)) + 
-                        geom_bar(colour = "black", 
-                                 fill = "white", 
-                                 aes(y = ..count..)) +
-                        theme_bw() +
-                        ylab(NULL) + 
-                        xlab(NULL) + 
-                        ggtitle(NULL) +
-                        theme(axis.text.y = element_blank(),
-                              axis.ticks.y  = element_blank())
-                        
-                }
+        TextoEstatisticas <- reactive({
                 
+                TESTE_MinhasTretas(a, input$area_de_resultado, input$tipo_de_programa, input$dimensao_escolhida)
+
+        })
+        
+        
+        output$Estatisticas <- renderUI({
                 
-                else if(input$dimensao_escolhida == "indicadores_agrupamento_Fisica"){
-                        
-                        ggplot(dataTable(), 
-                               aes(x = indicadores_agrupamento_Fisica)) + 
+                TextoEstatisticas()
+                
+        })
+        
+        
+        output$Plot<- renderPlot({
+                
+                if(input$dimensao_escolhida == "Financeira") {
+                
+                        w <- ggplot(dataTable(), aes(x = relacao_financeira_agrupamento)) + 
                                 geom_bar(colour = "black", 
                                          fill = "white", 
                                          aes(y = ..count..)) +
@@ -161,9 +152,26 @@ server <- shinyServer(function(input, output) {
                                       axis.ticks.y  = element_blank())
                         
                 }
+                
+                else if(input$dimensao_escolhida == "Fisica"){
+                        
+                        w <- ggplot(dataTable(), aes(x = relacao_fisica_agrupamento)) + 
+                                geom_bar(colour = "black", 
+                                         fill = "white", 
+                                         aes(y = ..count..)) +
+                                theme_bw() +
+                                ylab(NULL) + 
+                                xlab(NULL) + 
+                                ggtitle(NULL) +
+                                theme(axis.text.y = element_blank(),
+                                      axis.ticks.y  = element_blank())
+                        
+                }
+                
+                w
+                
+        }, height = 290)   
         
-        }, height = 290)      
-    
 })
 
 
