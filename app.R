@@ -1,9 +1,9 @@
-source("Treta.R")
+source("treta.R")
 
 ui <- shinyUI(dashboardPage(
         
-        dashboardHeader(title = "Teste CFAMGBH - 2015", 
-                        titleWidth = 550),
+        dashboardHeader(title = "CFAMGBH2015_v01", 
+                        titleWidth = 230),
         
         dashboardSidebar(
                 
@@ -41,17 +41,20 @@ ui <- shinyUI(dashboardPage(
         ),
         
         dashboardBody(
-                                
+                
                 fluidRow(
-        
-                        box(title = "Estatisticas", 
-                        status = "primary",
-                        width = 4,
-                        height = 300,
-                        solidHeader = TRUE,
-                        htmlOutput(outputId = "Estatisticas")
+                        
+                        tabBox(title = "Estatisticas", 
+                            status = "primary",
+                            width = 4,
+                            height = 300,
+                            tabPanel("Estatisticas1", 
+                                     htmlOutput(outputId = "Estatisticas1")),
+                            tabPanel("Estatisticas2",
+                                     htmlOutput(outputId = "Estatisticas2"))
+                            
                         ),
-        
+                        
                         tabBox(title = NULL,
                                side = "left", 
                                width = 8,
@@ -74,35 +77,35 @@ ui <- shinyUI(dashboardPage(
                                              As faixas mais importantes sao aquelas em que as metas e execucoes estao zeradas. Em seguida, destaca-se a faixa de equilibrio, entre 0.7 e 1.3. As demais faixas apresentam situacoes de desequilibrio, em que a subestimacao ou superestimacao de metas. </p></center>")),
                                tabPanel("Grafico", 
                                         HTML("<center><p>Enfim, foi plotado um grafico que ilustra o numero de sub-acoes em cada faixa de resultado, de acordo com os criterios selecionados pelo usuario (tipo de programa, area de resultado e dimensao analisada).</p></center>"))
-                        )
-                ),
-
+                                        )
+                               ),
+                
                 fluidRow(
-        
-                        box(title = "Escalonamento das Sub-Acoes em Faixas de Avaliacao", 
-                        status = "primary",
-                        width = 12,
-                        height = 350,
-                        solidHeader = TRUE,
-                        plotOutput("Plot")
-                        )
-        
-                ),
-
-                fluidRow(
-        
-                        box(title = "Visualizar Sub-Acoes:",
-                        status = "primary",
-                        width = 12,
-                        solidHeader = TRUE,
-                        dataTableOutput(outputId="dTable")
-                        )
-        
-                )
-
-        )
                         
-))
+                        box(title = "Escalonamento das Sub-Acoes em Faixas de Avaliacao", 
+                            status = "primary",
+                            width = 12,
+                            height = 350,
+                            solidHeader = TRUE,
+                            plotOutput("Plot")
+                        )
+                        
+                ),
+                
+                fluidRow(
+                        
+                        box(title = "Visualizar Sub-Acoes:",
+                            status = "primary",
+                            width = 12,
+                            solidHeader = TRUE,
+                            dataTableOutput(outputId="dTable")
+                        )
+                        
+                )
+                
+                                        )
+        
+                ))
 
 
 server <- shinyServer(function(input, output) {
@@ -122,16 +125,29 @@ server <- shinyServer(function(input, output) {
         })
         
         
-        TextoEstatisticas <- reactive({
+        TextoEstatisticas1 <- reactive({
                 
-                TESTE_MinhasTretas(a, input$area_de_resultado, input$tipo_de_programa, input$dimensao_escolhida)
-
+                TESTE_MinhasTretas1(a, input$area_de_resultado, input$tipo_de_programa, input$dimensao_escolhida)
+                
         })
         
         
-        output$Estatisticas <- renderUI({
+        output$Estatisticas1 <- renderUI({
                 
-                TextoEstatisticas()
+                TextoEstatisticas1()
+                
+        })
+        
+        TextoEstatisticas2 <- reactive({
+                
+                TESTE_MinhasTretas2(a, input$area_de_resultado, input$tipo_de_programa, input$dimensao_escolhida)
+                
+        })
+        
+        
+        output$Estatisticas2 <- renderUI({
+                
+                TextoEstatisticas2()
                 
         })
         
@@ -139,7 +155,7 @@ server <- shinyServer(function(input, output) {
         output$Plot<- renderPlot({
                 
                 if(input$dimensao_escolhida == "Financeira") {
-                
+                        
                         w <- ggplot(dataTable(), aes(x = relacao_financeira_agrupamento)) + 
                                 geom_bar(colour = "black", 
                                          fill = "white", 
