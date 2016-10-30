@@ -36,127 +36,196 @@ ui <- shinyUI(dashboardPage(
                 radioButtons("dimensao_escolhida",
                              "Selecionar a dimensao a ser analisada:",
                              c("Financeira" = "Financeira",
-                               "Fisica" = "Fisica"))
+                               "Fisica" = "Fisica")),
+                uiOutput("programa_ui")
                 
         ),
         
         dashboardBody(
                 
-                fluidRow(
+                box(title = "Sub-Acoes",
+                    collapsible = TRUE,
+                    solidHeader = TRUE,
+                    collapsed = TRUE,
+                    width = 13,
+                    status = "primary",
+                
+                        fluidRow(
+                                
+                                tabBox(title = NULL, 
+                                    status = "primary",
+                                    width = 4,
+                                    height = 300,
+                                    selected = "Estatisticas1",
+                                    tabPanel("Estatisticas1", 
+                                             htmlOutput(outputId = "Estatisticas1.1")),
+                                    tabPanel("Estatisticas2",
+                                             htmlOutput(outputId = "Estatisticas1.2"))
+                                    
+                                ),
+                                
+                                tabBox(title = NULL,
+                                       side = "left", 
+                                       width = 8,
+                                       selected = "Theorem",
+                                       tabPanel("I.Financeiro", 
+                                                HTML("<center><p>Em primeiro lugar, foi calculada a relacao entre: <br> 
+                                                     INDICADOR FINANCEIRO = <sup>EXECUCAO FINANCEIRA</sup> &frasl; <sub>PREVISAO FINANCEIRA</sub> <br>
+                                                     de cada sub-acao, sendo o resultado um INDICADOR FINANCEIRO.
+                                                     Por exemplo, se uma sub-acao apresenta um INDICADOR FINANCEIRO de 0.5, isso significa que a EXECUCAO FINANCEIRA da mesma representou a metade de sua respectiva PREVISAO FINANCEIRA, ou seja, executou-se apenas a metade do que foi previsto <br>
+                                                     O ideal, portanto, e um INDICADOR FINANCEIRO de 1, que representa um equilibrio entre o valor previsto e o valor executado.</p></center>")),
+                                       tabPanel("I.Fisico", 
+                                                HTML("<center><p>Em primeiro lugar, foi calculada a relacao entre: <br> 
+                                                     INDICADOR FISICO = <sup>EXECUCAO FISICA</sup> &frasl; <sub>PREVISAO FISICA</sub> <br>
+                                                     de cada sub-acao, sendo o resultado um INDICADOR FISICO.
+                                                     Por exemplo, se uma sub-acao apresenta um INDICADOR FISICO de 2.0, isso significa que a EXECUCAO FISICA da mesma representou o dobro de sua respectiva PREVISAO FISICA, ou seja, executou-se duas vezes o que foi previsto <br>
+                                                     O ideal, portanto, e um INDICADOR FISICO de 1, que representa um equilibrio entre a meta fisica previsto e a executado.</p></center>"),
+                                                textOutput("originalmean")),
+                                       tabPanel("Escalonamento",
+                                                HTML("<center><p>As sub-acoes foram escalonadas em faixas de resultado ilustrativas, a fim de facilitar o entendimento das informacoes. <br>
+                                                     As faixas mais importantes sao aquelas em que as metas e execucoes estao zeradas. Em seguida, destaca-se a faixa de equilibrio, entre 0.7 e 1.3. As demais faixas apresentam situacoes de desequilibrio, em que a subestimacao ou superestimacao de metas. </p></center>")),
+                                       tabPanel("Grafico", 
+                                                HTML("<center><p>Enfim, foi plotado um grafico que ilustra o numero de sub-acoes em cada faixa de resultado, de acordo com os criterios selecionados pelo usuario (tipo de programa, area de resultado e dimensao analisada).</p></center>"))
+                                                )
+                                       ),
                         
-                        tabBox(title = "Estatisticas", 
-                            status = "primary",
-                            width = 4,
-                            height = 300,
-                            tabPanel("Estatisticas1", 
-                                     htmlOutput(outputId = "Estatisticas1")),
-                            tabPanel("Estatisticas2",
-                                     htmlOutput(outputId = "Estatisticas2"))
-                            
+                        fluidRow(
+                                
+                                box(title = "Escalonamento das Sub-Acoes em Faixas de Avaliacao", 
+                                    status = "primary",
+                                    width = 12,
+                                    height = 350,
+                                    solidHeader = TRUE,
+                                    plotOutput("Plot")
+                                )
+                                
                         ),
                         
-                        tabBox(title = NULL,
-                               side = "left", 
-                               width = 8,
-                               selected = "Theorem",
-                               tabPanel("I.Financeiro", 
-                                        HTML("<center><p>Em primeiro lugar, foi calculada a relacao entre: <br> 
-                                             INDICADOR FINANCEIRO = <sup>EXECUCAO FINANCEIRA</sup> &frasl; <sub>PREVISAO FINANCEIRA</sub> <br>
-                                             de cada sub-acao, sendo o resultado um INDICADOR FINANCEIRO.
-                                             Por exemplo, se uma sub-acao apresenta um INDICADOR FINANCEIRO de 0.5, isso significa que a EXECUCAO FINANCEIRA da mesma representou a metade de sua respectiva PREVISAO FINANCEIRA, ou seja, executou-se apenas a metade do que foi previsto <br>
-                                             O ideal, portanto, e um INDICADOR FINANCEIRO de 1, que representa um equilibrio entre o valor previsto e o valor executado.</p></center>")),
-                               tabPanel("I.Fisico", 
-                                        HTML("<center><p>Em primeiro lugar, foi calculada a relacao entre: <br> 
-                                             INDICADOR FISICO = <sup>EXECUCAO FISICA</sup> &frasl; <sub>PREVISAO FISICA</sub> <br>
-                                             de cada sub-acao, sendo o resultado um INDICADOR FISICO.
-                                             Por exemplo, se uma sub-acao apresenta um INDICADOR FISICO de 2.0, isso significa que a EXECUCAO FISICA da mesma representou o dobro de sua respectiva PREVISAO FISICA, ou seja, executou-se duas vezes o que foi previsto <br>
-                                             O ideal, portanto, e um INDICADOR FISICO de 1, que representa um equilibrio entre a meta fisica previsto e a executado.</p></center>"),
-                                        textOutput("originalmean")),
-                               tabPanel("Escalonamento",
-                                        HTML("<center><p>As sub-acoes foram escalonadas em faixas de resultado ilustrativas, a fim de facilitar o entendimento das informacoes. <br>
-                                             As faixas mais importantes sao aquelas em que as metas e execucoes estao zeradas. Em seguida, destaca-se a faixa de equilibrio, entre 0.7 e 1.3. As demais faixas apresentam situacoes de desequilibrio, em que a subestimacao ou superestimacao de metas. </p></center>")),
-                               tabPanel("Grafico", 
-                                        HTML("<center><p>Enfim, foi plotado um grafico que ilustra o numero de sub-acoes em cada faixa de resultado, de acordo com os criterios selecionados pelo usuario (tipo de programa, area de resultado e dimensao analisada).</p></center>"))
-                                        )
-                               ),
-                
-                fluidRow(
-                        
-                        box(title = "Escalonamento das Sub-Acoes em Faixas de Avaliacao", 
-                            status = "primary",
-                            width = 12,
-                            height = 350,
-                            solidHeader = TRUE,
-                            plotOutput("Plot")
+                        fluidRow(
+                                
+                                box(title = "Visualizar Sub-Acoes:",
+                                    status = "primary",
+                                    width = 12,
+                                    solidHeader = TRUE,
+                                    dataTableOutput(outputId="dTable1")
+                                )
+                                
                         )
-                        
+                
                 ),
                 
-                fluidRow(
-                        
-                        box(title = "Visualizar Sub-Acoes:",
-                            status = "primary",
-                            width = 12,
-                            solidHeader = TRUE,
-                            dataTableOutput(outputId="dTable")
+                box(title = "Programas",
+                    collapsible = TRUE,
+                    collapsed = TRUE,
+                    solidHeader = TRUE,
+                    width = 13,
+                    status = "primary",
+                    
+                        fluidRow(
+                            
+                                box(title = "Blablablar Programas:",
+                                    status = "primary",
+                                    width = 12,
+                                    solidHeader = TRUE,
+                                    HTML("<center><p>Em primeiro lugar, foi calculada a relacao entre:</p></center>")
+                                )
+                                
+                                
+                                
+                        ),
+                    
+                        fluidRow(
+                                
+                                box(title = "Visualizar Programas:",
+                                    status = "primary",
+                                    width = 12,
+                                    solidHeader = TRUE,
+                                    dataTableOutput(outputId="dTable2.1")
+                                )
+                                
                         )
-                        
+                    
                 )
                 
-                                        )
+        )
         
-                ))
+))
 
 
 server <- shinyServer(function(input, output) {
         
+        ## renderUI
         
-        dataTable <- reactive({
+        output$programa_ui <- renderUI({
                 
-                TESTE_filtro(a, input$area_de_resultado, input$tipo_de_programa, input$dimensao_escolhida)
+                programas <- sort(unique(dataTable1.1()$programa))
+                
+                selectInput("programa_escolhido", 
+                            "Selecionar o programa a ser analisado:",
+                            multiple = TRUE,
+                            selected = programas,
+                            c(programas))
                 
         })
         
         
-        output$dTable <- renderDataTable({
+        ## Sub-Acoes
+        
+        
+        dataTable1.1 <- reactive({
                 
-                dataTable()
+                TESTE_filtro1.1(a, input$area_de_resultado, input$tipo_de_programa, input$dimensao_escolhida)
                 
         })
         
         
-        TextoEstatisticas1 <- reactive({
+        dataTable1.2 <- reactive({
                 
-                TESTE_MinhasTretas1(a, input$area_de_resultado, input$tipo_de_programa, input$dimensao_escolhida)
-                
-        })
-        
-        
-        output$Estatisticas1 <- renderUI({
-                
-                TextoEstatisticas1()
-                
-        })
-        
-        TextoEstatisticas2 <- reactive({
-                
-                TESTE_MinhasTretas2(a, input$area_de_resultado, input$tipo_de_programa, input$dimensao_escolhida)
+                TESTE_filtro1.2(dataTable1.1(), input$programa_escolhido)
                 
         })
         
         
-        output$Estatisticas2 <- renderUI({
+                output$dTable1 <- renderDataTable({
                 
-                TextoEstatisticas2()
+                dataTable1.2()
+                
+                })
+        
+        
+        TextoEstatisticas1.1 <- reactive({
+                
+                TESTE_MinhasTretas1.1(a, input$area_de_resultado, input$tipo_de_programa, input$dimensao_escolhida, input$programa_escolhido)
                 
         })
+        
+        
+                output$Estatisticas1.1 <- renderUI({
+                
+                TextoEstatisticas1.1()
+                
+                })
+        
+        
+        TextoEstatisticas1.2 <- reactive({
+                
+                TESTE_MinhasTretas1.2(a, input$area_de_resultado, input$tipo_de_programa, input$dimensao_escolhida, input$programa_escolhido)
+                
+        })
+        
+        
+                output$Estatisticas1.2 <- renderUI({
+                
+                TextoEstatisticas1.2()
+                
+                })
         
         
         output$Plot<- renderPlot({
                 
                 if(input$dimensao_escolhida == "Financeira") {
                         
-                        w <- ggplot(dataTable(), aes(x = relacao_financeira_agrupamento)) + 
+                        w <- ggplot(dataTable1.2(), aes(x = relacao_financeira_agrupamento)) + 
                                 geom_bar(colour = "black", 
                                          fill = "white", 
                                          aes(y = ..count..)) +
@@ -171,7 +240,7 @@ server <- shinyServer(function(input, output) {
                 
                 else if(input$dimensao_escolhida == "Fisica"){
                         
-                        w <- ggplot(dataTable(), aes(x = relacao_fisica_agrupamento)) + 
+                        w <- ggplot(dataTable1.2(), aes(x = relacao_fisica_agrupamento)) + 
                                 geom_bar(colour = "black", 
                                          fill = "white", 
                                          aes(y = ..count..)) +
@@ -187,6 +256,24 @@ server <- shinyServer(function(input, output) {
                 w
                 
         }, height = 290)   
+        
+        
+        ## Programas
+        
+        
+        dataTable2.1 <- reactive({
+                
+                TESTE_filtro2.1(a, input$area_de_resultado, input$tipo_de_programa, input$dimensao_escolhida, input$programa_escolhido)
+                
+        })
+        
+        
+                output$dTable2.1 <- renderDataTable({
+                
+                dataTable2.1()
+                
+                })
+        
         
 })
 
