@@ -1,4 +1,4 @@
-ibrary(base64enc)
+library(base64enc)
 library(grid)
 library(shinydashboard)
 library(ggplot2)
@@ -7,11 +7,122 @@ library(plyr)
 library(DT)
 options(scipen = 999)
 
+
+## Ler e Preparar Planilhas
+
+# Planilha Sub-Acoes
+
 #a <- read.csv("./data/Planilha Subacoes.csv")
 a <- read.csv("D:/Trabalho/TCE/Teste API/TesteAPI/data/Planilha Subacoes.csv")
 
 levels(a$relacao_fisica_agrupamento) <- c("0.01 a 0.4", "0.4 a 0.7", "0.7 a 1.3", "1.3 a 2.0", "Acima de 2.0", "Nao ha execucao", "Nao ha meta")
 levels(a$relacao_financeira_agrupamento) <- c("0.01 a 0.4", "0.4 a 0.7", "0.7 a 1.3", "1.3 a 2.0", "Acima de 2.0", "Nao ha execucao", "Nao ha meta")
+
+a$X <- NULL
+
+# Planilha Programas
+
+b <- aggregate(list(a$valor_orcado, 
+                    a$valor_empenhado, 
+                    a$quantificacao_meta, 
+                    a$quantificacao_executada),
+               by = list(a$programa),
+               FUN = sum)
+
+
+colnames(b) <- c("programa", "valor_orcado_total", "valor_empenhado_total","meta_fisica_total", "execucao_fisica_total")
+
+barea_resultado <- aggregate(list(a$area_resultado, 
+                                  a$programa_tipo),
+                             by = list(a$programa),
+                             FUN = unique)
+
+colnames(barea_resultado) <- c("programa", "area_resultado", "programa_tipo")
+
+b <- merge(b, barea_resultado)
+
+b <- mutate(b, relacao_financeira_total = valor_empenhado_total/valor_orcado_total, relacao_fisica_total = execucao_fisica_total/meta_fisica_total)
+
+intervals <- c(-1.1,-0.9, 0.0001, 0.4001, 0.7001, 1.30001, 2.00001, 500)
+
+b$relacao_financeira_total_agrupamento <- cut(b$relacao_financeira_total, 
+                                              breaks = intervals,
+                                              labels = c("Nao ha meta",
+                                                         "Nao ha execucao",
+                                                         "0.01 a 0.4", 
+                                                         "0.4 a 0.7", 
+                                                         "0.7 a 1.3", 
+                                                         "1.3 a 2.0", 
+                                                         "Acima de 2.0"))
+
+b$relacao_fisica_total[is.nan(b$relacao_fisica_total)] <- -1
+
+b$relacao_fisica_total_agrupamento <- cut(b$relacao_fisica_total, 
+                                              breaks = intervals,
+                                              labels = c("Nao ha meta",
+                                                         "Nao ha execucao",
+                                                         "0.01 a 0.4", 
+                                                         "0.4 a 0.7", 
+                                                         "0.7 a 1.3", 
+                                                         "1.3 a 2.0", 
+                                                         "Acima de 2.0"))
+
+b <- b[, c(6, 1, 7, 2, 3, 8, 10, 4, 5, 9, 11)]
+
+
+# Planilha Acoes
+
+c.1 <- a
+
+c.1$acao_id <- as.character(paste(c.1$programa, c.1$acao, sep = "_"))
+
+c <- aggregate(list(c.1$valor_orcado, 
+                    c.1$valor_empenhado, 
+                    c.1$quantificacao_meta, 
+                    c.1$quantificacao_executada),
+               by = list(c.1$acao_id),
+               FUN = sum)
+
+colnames(c) <- c("acao_id", "valor_orcado_total", "valor_empenhado_total","meta_fisica_total", "execucao_fisica_total")
+
+carea_resultado <- aggregate(list(c.1$area_resultado,
+                                  c.1$programa,
+                                  c.1$programa_tipo),
+                             by = list(c.1$acao_id),
+                             FUN = unique)
+
+colnames(carea_resultado) <- c("acao_id", "area_resultado", "programa", "programa_tipo")
+
+c <- merge(c, carea_resultado)
+
+c <- mutate(c, relacao_financeira_total = valor_empenhado_total/valor_orcado_total, relacao_fisica_total = execucao_fisica_total/meta_fisica_total)
+
+c$relacao_fisica_total[is.nan(c$relacao_fisica_total)] <- -1
+c$relacao_financeira_total[is.nan(c$relacao_financeira_total)] <- -1
+
+intervals <- c(-1.1,-0.9, 0.0001, 0.4001, 0.7001, 1.30001, 2.00001, 500)
+
+c$relacao_financeira_total_agrupamento <- cut(c$relacao_financeira_total, 
+                                              breaks = intervals,
+                                              labels = c("Nao ha meta",
+                                                         "Nao ha execucao",
+                                                         "0.01 a 0.4", 
+                                                         "0.4 a 0.7", 
+                                                         "0.7 a 1.3", 
+                                                         "1.3 a 2.0", 
+                                                         "Acima de 2.0"))
+
+c$relacao_fisica_total_agrupamento <- cut(c$relacao_fisica_total, 
+                                          breaks = intervals,
+                                          labels = c("Nao ha meta",
+                                                     "Nao ha execucao",
+                                                     "0.01 a 0.4", 
+                                                     "0.4 a 0.7", 
+                                                     "0.7 a 1.3", 
+                                                     "1.3 a 2.0", 
+                                                     "Acima de 2.0"))
+
+c <- c[, c(6, 7, 8, 1, 2, 3, 9, 11, 4, 5, 10, 12)]
 
 
 ## Funcoes
@@ -27,7 +138,7 @@ TESTE_filtro1.1 <- function(a, area_de_resultado, tipo_de_programa, dimensao_esc
         
         if(dimensao_escolhida == "Financeira") {
                 
-                resultado <- resultado[, -c(6, 7, 8, 9)]
+                resultado <- resultado[, -c(5, 6, 7, 8)]
                 resultado$valor_orcado <- format_real() (resultado$valor_orcado)
                 resultado$valor_empenhado <- format_real() (resultado$valor_empenhado)
                 resultado$relacao_financeira <- round(resultado$relacao_financeira, 4)
@@ -36,7 +147,7 @@ TESTE_filtro1.1 <- function(a, area_de_resultado, tipo_de_programa, dimensao_esc
         
         else if(dimensao_escolhida == "Fisica") {
                 
-                resultado <- resultado[, -c(10, 11, 12, 13)]
+                resultado <- resultado[, -c(9, 10, 11, 12)]
                 resultado$quantificacao_meta <- format_absoluto() (resultado$quantificacao_meta)
                 resultado$quantificacao_executada <- format_absoluto() (resultado$quantificacao_executada)
                 resultado$relacao_fisica <- round(resultado$relacao_fisica, 4)
@@ -187,10 +298,7 @@ TESTE_filtro2.1 <- function(a, area_de_resultado, tipo_de_programa, dimensao_esc
         
         if(dimensao_escolhida == "Financeira") {
                 
-                resultado2 <- resultado2[, -c(6, 7, 8, 9)]
-                resultado2 <- aggregate(list(resultado2$valor_orcado, resultado2$valor_empenhado), by = list(resultado2$programa), FUN = sum)
-                colnames(resultado2) <- c("programa","valor_orcado_total", "valor_empenhado_total")
-                resultado2 <- mutate(resultado2, relacao_financeira_total = valor_empenhado_total/valor_orcado_total)
+                resultado2 <- resultado2[, -c(8, 9, 10, 11)]
                 resultado2$valor_orcado_total <- format_real() (resultado2$valor_orcado_total)
                 resultado2$valor_empenhado_total <- format_real() (resultado2$valor_empenhado_total)
                 resultado2$relacao_financeira_total <- round(resultado2$relacao_financeira_total, 4)
@@ -199,10 +307,7 @@ TESTE_filtro2.1 <- function(a, area_de_resultado, tipo_de_programa, dimensao_esc
         
         else if(dimensao_escolhida == "Fisica") {
                 
-                resultado2 <- resultado2[, -c(10, 11, 12, 13)]
-                resultado2 <- aggregate(list(resultado2$quantificacao_meta, resultado2$quantificacao_executada), by = list(resultado2$programa), FUN = sum)
-                colnames(resultado2) <- c("programa", "meta_fisica_total", "execucao_fisica_total")
-                resultado2 <- mutate(resultado2, relacao_fisica_total = execucao_fisica_total/meta_fisica_total)
+                resultado2 <- resultado2[, -c(4, 5, 6, 7)]
                 resultado2$meta_fisica_total <- format_absoluto() (resultado2$meta_fisica_total)
                 resultado2$execucao_fisica_total <- format_absoluto() (resultado2$execucao_fisica_total)
                 resultado2$relacao_fisica_total <- round(resultado2$relacao_fisica_total, 4)
@@ -212,6 +317,157 @@ TESTE_filtro2.1 <- function(a, area_de_resultado, tipo_de_programa, dimensao_esc
         
 print(resultado2)
 
+
+}
+
+
+TESTE_MinhasTretas2.1 <- function(a, area_de_resultado, tipo_de_programa, dimensao_escolhida, programa_escolhido) {
+        
+        a <- a %>% filter(area_resultado %in% area_de_resultado,
+                          programa_tipo %in% tipo_de_programa,
+                          programa %in% programa_escolhido)
+        
+        if(dimensao_escolhida == "Financeira") {
+                
+                MFtot <- nrow(a)
+                MF1 <- round(nrow(a[a$relacao_financeira_total_agrupamento == "0.01 a 0.4", ]),4)
+                MF2 <- round(nrow(a[a$relacao_financeira_total_agrupamento == "0.4 a 0.7", ]),4)
+                MF3 <- round(nrow(a[a$relacao_financeira_total_agrupamento == "0.7 a 1.3", ]),4)
+                MF4 <- round(nrow(a[a$relacao_financeira_total_agrupamento == "1.3 a 2.0", ]),4)
+                MF5 <- round(nrow(a[a$relacao_financeira_total_agrupamento == "Acima de 2.0", ]),4)
+                MF6 <- round(nrow(a[a$relacao_financeira_total_agrupamento == "Nao ha execucao", ]),4)
+                MF7 <- round(nrow(a[a$relacao_financeira_total_agrupamento == "Nao ha meta", ]),4)
+                
+                q <- HTML(paste("<center>O total de programas escolhidos e", MFtot, ". Deste total:</br>",
+                                MF1, "(ou", round(MF1/MFtot, 4), "do total) estao avaliados entre 0.01 e 0.4; </br>",
+                                MF2, "(ou", round(MF2/MFtot, 4), "do total) estao avaliados entre 0.4 e 0.7; </br>",
+                                MF3, "(ou", round(MF3/MFtot, 4), "do total) estao avaliados entre 0.7 e 1.3; </br>",
+                                MF4, "(ou", round(MF4/MFtot, 4), "do total) estao avaliados entre 1.3 e 2.0; </br>",
+                                MF5, "(ou", round(MF5/MFtot, 4), "do total) estao avaliados acima de 2.0; </br>",
+                                MF6, "(ou", round(MF6/MFtot, 4), "do total) nao possuem execucao; </br>",
+                                MF7, "(ou", round(MF7/MFtot, 4), "do total) nao possuem metas.</br>",
+                                "Ainda, destaca-se que a meta financeira total dos setores selecionados e", format_real() (sum(a$valor_orcado_total)),
+                                "e a execucao financeira total dos setores selecionados e", format_real() (sum(a$valor_empenhado_total)),
+                                ", resultando num indicador financeiro total de", round(sum(a$valor_empenhado_total)/sum(a$valor_orcado_total), 4), ".</center>"))
+                
+        }
+        
+        else if(dimensao_escolhida == "Fisica") {
+                
+                MFtot <- nrow(a)
+                MF1 <- round(nrow(a[a$relacao_fisica_total_agrupamento == "0.01 a 0.4", ]),4)
+                MF2 <- round(nrow(a[a$relacao_fisica_total_agrupamento == "0.4 a 0.7", ]),4)
+                MF3 <- round(nrow(a[a$relacao_fisica_total_agrupamento == "0.7 a 1.3", ]),4)
+                MF4 <- round(nrow(a[a$relacao_fisica_total_agrupamento == "1.3 a 2.0", ]),4)
+                MF5 <- round(nrow(a[a$relacao_fisica_total_agrupamento == "Acima de 2.0", ]),4)
+                MF6 <- round(nrow(a[a$relacao_fisica_total_agrupamento == "Nao ha execucao", ]),4)
+                MF7 <- round(nrow(a[a$relacao_fisica_total_agrupamento == "Nao ha meta", ]),4)
+                
+                q <- HTML(paste("<center>O total de programas escolhidos e", MFtot, ". Deste total:</br>",
+                                MF1, "(ou", round(MF1/MFtot, 4), "do total) estao avaliados entre 0.01 e 0.4; </br>",
+                                MF2, "(ou", round(MF2/MFtot, 4), "do total) estao avaliados entre 0.4 e 0.7; </br>",
+                                MF3, "(ou", round(MF3/MFtot, 4), "do total) estao avaliados entre 0.7 e 1.3; </br>",
+                                MF4, "(ou", round(MF4/MFtot, 4), "do total) estao avaliados entre 1.3 e 2.0; </br>",
+                                MF5, "(ou", round(MF5/MFtot, 4), "do total) estao avaliados acima de 2.0; </br>",
+                                MF6, "(ou", round(MF6/MFtot, 4), "do total) nao possuem execucao; </br>",
+                                MF7, "(ou", round(MF7/MFtot, 4), "do total) nao possuem metas.</br>",
+                                "Ainda, destaca-se que a meta fisica total dos setores selecionados e", format_absoluto() (sum(a$meta_fisica_total)),
+                                "e a execucao fisica total dos setores selecionados e", format_absoluto() (sum(a$execucao_fisica_total)),
+                                ", resultando num indicador fisico total de", round(sum(a$execucao_fisica_total)/sum(a$meta_fisica_total), 4), " (destaca-se que tais valores nao sao interpretaveis).</center>"))
+                
+        }
+        
+        q
+        
+}
+
+
+TESTE_MinhasTretas2.2 <- function(a, area_de_resultado, tipo_de_programa, dimensao_escolhida, programa_escolhido) {
+        
+        b <- a
+        
+        a <- a %>% filter(area_resultado %in% area_de_resultado,
+                          programa_tipo %in% tipo_de_programa,
+                          programa %in% programa_escolhido)
+        
+        if(dimensao_escolhida == "Financeira") {
+                
+                Atot <- nrow(a)
+                Btot1114 <- nrow(b)
+                METAFINtot1114 <- sum(b$valor_orcado_total)
+                EXECFINtot1114 <- sum(b$valor_empenhado_total)
+                MT2METAFINtot <- sum(a$valor_orcado_total)
+                MT2EXECFINtot <- sum(a$valor_empenhado_total)
+                
+                w <- HTML(paste("<center>O total de programas escolhidos e", Atot, "que corresponde a", round(Atot/Btot1114, 4), "do total de programas.</br>",
+                                "Destaca-se que a meta financeira total dos setores selecionados e", format_real() (MT2METAFINtot),
+                                "e a execucao financeira total dos setores selecionados e", format_real() (MT2EXECFINtot),
+                                ", resultando num indicador financeiro total de", round(MT2EXECFINtot/MT2METAFINtot, 4), ".</br>",
+                                "Ainda, pode-se ressaltar que a meta fianceira total dos setores selecionados corresponde a", round(MT2METAFINtot/METAFINtot1114, 4), "da meta financeira total de", format_real() (METAFINtot1114), ". </br>",
+                                "Da mesma forma, ressalta-se que a execucao financeira total dos setores selecionados corresponde a", round(MT2EXECFINtot/EXECFINtot1114, 4), "da execucao financeira total de", format_real() (EXECFINtot1114), ". </center>"))
+                
+        }
+        
+        else if(dimensao_escolhida == "Fisica") {
+                
+                
+                resultado <- a %>% filter(area_resultado %in% area_de_resultado,
+                                          programa_tipo %in% tipo_de_programa,
+                                          programa %in% programa_escolhido)
+                
+                resultado <- resultado[, -c(10, 11, 12, 13)]
+                
+                Atot <- nrow(a)
+                Btot1114 <- nrow(b)
+                METAFIStot1114 <- sum(b$meta_fisica_total)
+                EXECFIStot1114 <- sum(b$execucao_fisica_total)
+                MT2METAFIStot <- sum(a$meta_fisica_total)
+                MT2EXECFIStot <- sum(a$execucao_fisica_total)
+                
+                w <- HTML(paste("<center>O total de programas escolhidos e", Atot, "que corresponde a", round(Atot/Btot1114, 4), "do total de programas.</br>",
+                                "Destaca-se que a meta fisica total dos setores selecionados e", format_absoluto() (MT2METAFIStot),
+                                "e a execucao fisica total dos setores selecionados e", format_absoluto() (MT2EXECFIStot),
+                                ", resultando num indicador fisico total de", round(MT2EXECFIStot/MT2METAFIStot, 4), ".</br>",
+                                "Ainda, pode-se ressaltar que a meta fisica total dos setores selecionados corresponde a", round(MT2METAFIStot/METAFIStot1114, 4), "da meta fisica total de", format_absoluto() (METAFIStot1114), ". </br>",
+                                "Da mesma forma, ressalta-se que a execucao fisica total dos setores selecionados corresponde a", round(MT2EXECFIStot/EXECFIStot1114, 4), "da execucao fisica total de", format_absoluto() (EXECFIStot1114), ". </center>"))
+                
+        }
+        
+        w
+}
+
+
+# Funcoes Acoes
+
+
+TESTE_filtro3.1 <- function(a, area_de_resultado, tipo_de_programa, dimensao_escolhida, programa_escolhido) {
+        
+        resultado3 <- a %>% filter(area_resultado %in% area_de_resultado,
+                                   programa_tipo %in% tipo_de_programa,
+                                   programa %in% programa_escolhido)
+        
+        if(dimensao_escolhida == "Financeira") {
+                
+                resultado3 <- resultado3[, -c(9, 10, 11, 12)]
+                resultado3$valor_orcado_total <- format_real() (resultado3$valor_orcado_total)
+                resultado3$valor_empenhado_total <- format_real() (resultado3$valor_empenhado_total)
+                resultado3$relacao_financeira_total <- round(resultado3$relacao_financeira_total, 4)
+                
+        }
+        
+        else if(dimensao_escolhida == "Fisica") {
+                
+                resultado3 <- resultado3[, -c(5, 6, 7, 8)]
+                resultado3$meta_fisica_total <- format_absoluto() (resultado3$meta_fisica_total)
+                resultado3$execucao_fisica_total <- format_absoluto() (resultado3$execucao_fisica_total)
+                resultado3$relacao_fisica_total <- round(resultado3$relacao_fisica_total, 4)
+                
+        }
+        
+        
+        print(resultado3)
+        
+        
 }
         
        
