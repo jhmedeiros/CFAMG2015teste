@@ -10,34 +10,44 @@ options(scipen = 999)
 
 ## Ler e Preparar Planilhas
 
+# Planilha Bruta
+
+
+#a <- read.csv("./data/Planilha Subacoes2.csv")
+#a <- read.csv("D:/Trabalho/TCE/Teste API/TesteAPI/data/Planilha Subacoes2.csv")
+a0 <- read.csv("D:/Users/joao.medeiros/Documents/Teste2015/data/Planilha Subacoes2.csv")
+
+levels(a0$relacao_fisica_agrupamento) <- c("0.01 a 0.4", "0.4 a 0.7", "0.7 a 1.3", "1.3 a 2.0", "Acima de 2.0", "Nao ha execucao", "Nao ha meta")
+levels(a0$relacao_financeira_agrupamento) <- c("0.01 a 0.4", "0.4 a 0.7", "0.7 a 1.3", "1.3 a 2.0", "Acima de 2.0", "Nao ha execucao", "Nao ha meta")
+
+a0$X <- NULL
+
 # Planilha Sub-Acoes
 
-#a <- read.csv("./data/Planilha Subacoes.csv")
-a <- read.csv("D:/Trabalho/TCE/Teste API/TesteAPI/data/Planilha Subacoes.csv")
+a <- a0[, c(1:12, 14, 20)]
 
-levels(a$relacao_fisica_agrupamento) <- c("0.01 a 0.4", "0.4 a 0.7", "0.7 a 1.3", "1.3 a 2.0", "Acima de 2.0", "Nao ha execucao", "Nao ha meta")
-levels(a$relacao_financeira_agrupamento) <- c("0.01 a 0.4", "0.4 a 0.7", "0.7 a 1.3", "1.3 a 2.0", "Acima de 2.0", "Nao ha execucao", "Nao ha meta")
-
-a$X <- NULL
 
 # Planilha Programas
 
-b <- aggregate(list(a$valor_orcado, 
-                    a$valor_empenhado, 
-                    a$quantificacao_meta, 
-                    a$quantificacao_executada),
-               by = list(a$programa),
+
+
+b <- aggregate(list(a0$valor_orcado, 
+                    a0$valor_empenhado, 
+                    a0$quantificacao_meta, 
+                    a0$quantificacao_executada),
+               by = list(a0$programa),
                FUN = sum)
 
 
 colnames(b) <- c("programa", "valor_orcado_total", "valor_empenhado_total","meta_fisica_total", "execucao_fisica_total")
 
-barea_resultado <- aggregate(list(a$area_resultado, 
-                                  a$programa_tipo),
-                             by = list(a$programa),
+barea_resultado <- aggregate(list(a0$area_resultado, 
+                                  a0$programa_tipo,
+                                  a0$nome_programa),
+                             by = list(a0$programa),
                              FUN = unique)
 
-colnames(barea_resultado) <- c("programa", "area_resultado", "programa_tipo")
+colnames(barea_resultado) <- c("programa", "area_resultado", "programa_tipo", "nome_programa")
 
 b <- merge(b, barea_resultado)
 
@@ -58,40 +68,44 @@ b$relacao_financeira_total_agrupamento <- cut(b$relacao_financeira_total,
 b$relacao_fisica_total[is.nan(b$relacao_fisica_total)] <- -1
 
 b$relacao_fisica_total_agrupamento <- cut(b$relacao_fisica_total, 
-                                              breaks = intervals,
-                                              labels = c("Nao ha meta",
-                                                         "Nao ha execucao",
-                                                         "0.01 a 0.4", 
-                                                         "0.4 a 0.7", 
-                                                         "0.7 a 1.3", 
-                                                         "1.3 a 2.0", 
-                                                         "Acima de 2.0"))
+                                          breaks = intervals,
+                                          labels = c("Nao ha meta",
+                                                     "Nao ha execucao",
+                                                     "0.01 a 0.4", 
+                                                     "0.4 a 0.7", 
+                                                     "0.7 a 1.3", 
+                                                     "1.3 a 2.0", 
+                                                     "Acima de 2.0"))
 
-b <- b[, c(6, 1, 7, 2, 3, 8, 10, 4, 5, 9, 11)]
+b <- b[, c(6, 1, 7, 2, 3, 9, 11, 4, 5, 10, 12, 8)]
+
+levels(b$relacao_fisica_total_agrupamento) <- c("0.01 a 0.4", "0.4 a 0.7", "0.7 a 1.3", "1.3 a 2.0", "Acima de 2.0", "Nao ha execucao", "Nao ha meta")
+levels(b$relacao_financeira_total_agrupamento) <- c("0.01 a 0.4", "0.4 a 0.7", "0.7 a 1.3", "1.3 a 2.0", "Acima de 2.0", "Nao ha execucao", "Nao ha meta")
 
 
 # Planilha Acoes
 
-c.1 <- a
-
-c.1$acao_id <- as.character(paste(c.1$programa, c.1$acao, sep = "_"))
+c.1 <- a0
 
 c <- aggregate(list(c.1$valor_orcado, 
                     c.1$valor_empenhado, 
                     c.1$quantificacao_meta, 
                     c.1$quantificacao_executada),
-               by = list(c.1$acao_id),
+               by = list(c.1$acao),
                FUN = sum)
 
-colnames(c) <- c("acao_id", "valor_orcado_total", "valor_empenhado_total","meta_fisica_total", "execucao_fisica_total")
+colnames(c) <- c("acao", "valor_orcado_total", "valor_empenhado_total","meta_fisica_total", "execucao_fisica_total")
 
 carea_resultado <- aggregate(list(c.1$area_resultado,
                                   c.1$programa,
-                                  c.1$programa_tipo),
-                             by = list(c.1$acao_id),
+                                  c.1$programa_tipo,
+                                  c.1$nome_acao,
+                                  c.1$sub_acao),
+                             by = list(c.1$acao),
                              FUN = unique)
 
-colnames(carea_resultado) <- c("acao_id", "area_resultado", "programa", "programa_tipo")
+
+colnames(carea_resultado) <- c("acao", "area_resultado", "programa", "programa_tipo", "nome_acao", "sub_acoes")
 
 c <- merge(c, carea_resultado)
 
@@ -122,8 +136,10 @@ c$relacao_fisica_total_agrupamento <- cut(c$relacao_fisica_total,
                                                      "1.3 a 2.0", 
                                                      "Acima de 2.0"))
 
-c <- c[, c(6, 7, 8, 1, 2, 3, 9, 11, 4, 5, 10, 12)]
+c <- c[, c(6, 7, 8, 10, 1, 2, 3, 11, 13, 4, 5, 12, 14, 9)]
 
+levels(c$relacao_fisica_total_agrupamento) <- c("0.01 a 0.4", "0.4 a 0.7", "0.7 a 1.3", "1.3 a 2.0", "Acima de 2.0", "Nao ha execucao", "Nao ha meta")
+levels(c$relacao_financeira_total_agrupamento) <- c("0.01 a 0.4", "0.4 a 0.7", "0.7 a 1.3", "1.3 a 2.0", "Acima de 2.0", "Nao ha execucao", "Nao ha meta")
 
 ## Funcoes
 
@@ -134,7 +150,7 @@ c <- c[, c(6, 7, 8, 1, 2, 3, 9, 11, 4, 5, 10, 12)]
 TESTE_filtro1.1 <- function(a, area_de_resultado, tipo_de_programa, dimensao_escolhida) {
         
         resultado <- a %>% filter(area_resultado %in% area_de_resultado,
-                          programa_tipo %in% tipo_de_programa)
+                                  programa_tipo %in% tipo_de_programa)
         
         if(dimensao_escolhida == "Financeira") {
                 
@@ -172,7 +188,7 @@ TESTE_filtro1.2 <- function(a, programa_escolhido) {
 
 
 TESTE_MinhasTretas1.1 <- function(a, area_de_resultado, tipo_de_programa, dimensao_escolhida, programa_escolhido) {
-
+        
         a <- a %>% filter(area_resultado %in% area_de_resultado,
                           programa_tipo %in% tipo_de_programa,
                           programa %in% programa_escolhido)
@@ -239,7 +255,7 @@ TESTE_MinhasTretas1.2 <- function(a, area_de_resultado, tipo_de_programa, dimens
         a <- a %>% filter(area_resultado %in% area_de_resultado,
                           programa_tipo %in% tipo_de_programa,
                           programa %in% programa_escolhido)
-
+        
         if(dimensao_escolhida == "Financeira") {
                 
                 Atot <- nrow(a)
@@ -315,9 +331,9 @@ TESTE_filtro2.1 <- function(a, area_de_resultado, tipo_de_programa, dimensao_esc
         }
         
         
-print(resultado2)
-
-
+        print(resultado2)
+        
+        
 }
 
 
@@ -410,13 +426,6 @@ TESTE_MinhasTretas2.2 <- function(a, area_de_resultado, tipo_de_programa, dimens
         
         else if(dimensao_escolhida == "Fisica") {
                 
-                
-                resultado <- a %>% filter(area_resultado %in% area_de_resultado,
-                                          programa_tipo %in% tipo_de_programa,
-                                          programa %in% programa_escolhido)
-                
-                resultado <- resultado[, -c(10, 11, 12, 13)]
-                
                 Atot <- nrow(a)
                 Btot1114 <- nrow(b)
                 METAFIStot1114 <- sum(b$meta_fisica_total)
@@ -442,9 +451,11 @@ TESTE_MinhasTretas2.2 <- function(a, area_de_resultado, tipo_de_programa, dimens
 
 TESTE_filtro3.1 <- function(a, area_de_resultado, tipo_de_programa, dimensao_escolhida, programa_escolhido) {
         
-        resultado3 <- a %>% filter(area_resultado %in% area_de_resultado,
-                                   programa_tipo %in% tipo_de_programa,
-                                   programa %in% programa_escolhido)
+        ## resultado3 <- a %>% filter(area_resultado %in% area_de_resultado,
+        ##                        programa_tipo %in% tipo_de_programa,
+        ##                        programa %in% programa_escolhido)
+        
+        resultado3 <- a
         
         if(dimensao_escolhida == "Financeira") {
                 
@@ -469,11 +480,11 @@ TESTE_filtro3.1 <- function(a, area_de_resultado, tipo_de_programa, dimensao_esc
         
         
 }
-        
-       
+
+
 # Funcoes Geral
 
- 
+
 format_real <- function (prefix = "R$", suffix = "", ..., big.mark = "\\.", negative_parens = FALSE) {
         
         function(x) {
