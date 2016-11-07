@@ -37,7 +37,8 @@ ui <- shinyUI(dashboardPage(
                              "Selecionar a dimensao a ser analisada:",
                              c("Financeira" = "Financeira",
                                "Fisica" = "Fisica")),
-                uiOutput("programa_ui")
+                uiOutput("programa_ui"),
+                uiOutput("acao_ui")
                 
         ),
         
@@ -102,7 +103,7 @@ ui <- shinyUI(dashboardPage(
                           
                           fluidRow(
                                   
-                                  box(tags$head(tags$style(".shiny-plot-output{height:25vh !important;}")),
+                                  box(tags$head(tags$style(".shiny-plot-output{height:400px !important;}")),
                                       title = "Graficos", 
                                       collapsible = TRUE,
                                       collapsed = TRUE,
@@ -117,7 +118,8 @@ ui <- shinyUI(dashboardPage(
                                                      side = "left",
                                                      tabPanel("Grafico1",
                                                               plotOutput(outputId = "Plot1.1")),
-                                                     tabPanel("Grafico2")
+                                                     tabPanel("Grafico2",
+                                                              plotOutput(outputId = "Plot1.2"))
                                               )
                                               
                                       )    
@@ -134,7 +136,7 @@ ui <- shinyUI(dashboardPage(
                                       status = "success",
                                       width = 12,
                                       solidHeader = TRUE,
-                                      dataTableOutput(outputId="dTable1")
+                                      DT::dataTableOutput(outputId="dTable1")
                                   )
                                   
                           )
@@ -198,7 +200,8 @@ ui <- shinyUI(dashboardPage(
                                                      side = "left",
                                                      tabPanel("Grafico1",
                                                               plotOutput("Plot2.1")),
-                                                     tabPanel("Grafico2")
+                                                     tabPanel("Grafico2",
+                                                              plotOutput("Plot2.2"))
                                               )
                                               
                                       )    
@@ -275,8 +278,10 @@ ui <- shinyUI(dashboardPage(
                                               tabBox(title = NULL,
                                                      width = 12,
                                                      side = "left",
-                                                     tabPanel("Grafico1"),
-                                                     tabPanel("Grafico2")
+                                                     tabPanel("Grafico1",
+                                                              plotOutput(outputId = "Plot3.1")),
+                                                     tabPanel("Grafico2",
+                                                              plotOutput(outputId = "Plot3.2"))
                                               )
                                               
                                       )    
@@ -322,6 +327,19 @@ server <- shinyServer(function(input, output) {
         })
         
         
+        output$acao_ui <- renderUI({
+                
+                acoes <- sort(unique(dataTable1.2()$acao))
+                
+                selectInput("acao_escolhida", 
+                            "Selecionar a acao a ser analisada:",
+                            multiple = TRUE,
+                            selected = acoes,
+                            c(acoes))
+                
+        })
+        
+        
         ## Sub-Acoes
         
         
@@ -334,21 +352,48 @@ server <- shinyServer(function(input, output) {
         
         dataTable1.2 <- reactive({
                 
-                TESTE_filtro1.2(dataTable1.1(), input$programa_escolhido)
+                TESTE_filtro1.2(dataTable1.1(), input$programa_escolhido) 
                 
         })
         
         
-        output$dTable1 <- renderDataTable({
+        dataTable1.3 <- reactive({
                 
-                dataTable1.2()
+                TESTE_filtro1.3(dataTable1.2(), input$acao_escolhida)
                 
-        }, filter = "bottom")
+        })
         
+        
+        output$dTable1 <- DT::renderDataTable({
+                
+                if(input$dimensao_escolhida == "Financeira") {
+                
+                        a <- formatCurrency(datatable(dataTable1.3(), colnames = c("AR", "Programa", "Acao", "Sub Acao", "Valor Orcado", "Valor Empenhado", "Relacao", "Agrupamento", "Tipo do Programa", "Nome da Sub Acao")), 
+                                       columns = c("valor_orcado", "valor_empenhado"),
+                                       currency = "R$ ",
+                                       dec.mark = ",",
+                                       mark = "\\.")
+                        
+                }
+                
+                else if(input$dimensao_escolhida == "Fisica") {
+                        
+                        a <- formatCurrency(datatable(dataTable1.3(), colnames = c("AR", "Programa", "Acao", "Sub Acao", "Meta Fisica", "Execucao Fisica", "Relacao", "Agrupamento", "Tipo do Programa", "Nome da Sub Acao")), 
+                                       columns = c("quantificacao_meta", "quantificacao_executada"),
+                                       currency = "",
+                                       dec.mark = ",",
+                                       mark = "\\.")
+                        
+                }
+                
+                a
+                
+        })
+
         
         TextoEstatisticas1.1 <- reactive({
                 
-                TESTE_MinhasTretas1.1(a, input$area_de_resultado, input$tipo_de_programa, input$dimensao_escolhida, input$programa_escolhido)
+                TESTE_MinhasTretas1.1(a, input$area_de_resultado, input$tipo_de_programa, input$dimensao_escolhida, input$programa_escolhido, input$acao_escolhida)
                 
         })
         
@@ -362,11 +407,11 @@ server <- shinyServer(function(input, output) {
         
         TextoEstatisticas1.2 <- reactive({
                 
-                TESTE_MinhasTretas1.2(a, input$area_de_resultado, input$tipo_de_programa, input$dimensao_escolhida, input$programa_escolhido)
+                TESTE_MinhasTretas1.2(a, input$area_de_resultado, input$tipo_de_programa, input$dimensao_escolhida, input$programa_escolhido, input$acao_escolhida)
                 
         })
         
-        
+
         output$Estatisticas1.2 <- renderUI({
                 
                 TextoEstatisticas1.2()
@@ -378,7 +423,7 @@ server <- shinyServer(function(input, output) {
                 
                 if(input$dimensao_escolhida == "Financeira") {
                         
-                        w <- ggplot(dataTable1.2(), aes(x = relacao_financeira_agrupamento)) + 
+                        w <- ggplot(dataTable1.3(), aes(x = relacao_financeira_agrupamento)) + 
                                 geom_bar(colour = "black", 
                                          fill = "white", 
                                          aes(y = ..count..)) +
@@ -393,7 +438,7 @@ server <- shinyServer(function(input, output) {
                 
                 else if(input$dimensao_escolhida == "Fisica"){
                         
-                        w <- ggplot(dataTable1.2(), aes(x = relacao_fisica_agrupamento)) + 
+                        w <- ggplot(dataTable1.3(), aes(x = relacao_fisica_agrupamento)) + 
                                 geom_bar(colour = "black", 
                                          fill = "white", 
                                          aes(y = ..count..)) +
@@ -408,7 +453,48 @@ server <- shinyServer(function(input, output) {
                 
                 w
                 
-        }, height = 270)   
+        }, height = 225)
+        
+        
+        output$Plot1.2<- renderPlot({
+                
+                q = input$dTable1_rows_selected
+                
+                if(input$dimensao_escolhida == "Financeira") {
+                        
+                        e <- ggplot() +
+                                geom_point(data = dataTable1.3(), aes(x = valor_orcado, y = valor_empenhado)) +
+                                annotate("segment", x = 0, y = 0, xend = max(dataTable1.3()$valor_orcado), yend = max(dataTable1.3()$valor_orcado), linetype = 2) +
+                                #geom_line(linetype = 2, aes(x = 1:1000000000, y = 1:1000000000)) +
+                                #geom_point(data = q, x = q$valor_orcado, y = q$valor_empenhado, colour = "red") +
+                                theme_bw() +
+                                ylab("Valor Empenhado") + 
+                                xlab("Valor Orcado") + 
+                                scale_x_continuous(labels = format_real()) +
+                                scale_y_continuous(labels = format_real()) +
+                                theme()
+                                #coord_fixed() +
+                                ggtitle(NULL)
+                        
+                }
+                
+                else if(input$dimensao_escolhida == "Fisica"){
+                        
+                        e <- ggplot(dataTable1.3(), aes(x = quantificacao_meta, y = quantificacao_executada)) +
+                                geom_point() +
+                                theme_bw() +
+                                ylab("Execucao Fisica") + 
+                                xlab("Meta Fisica") + 
+                                scale_x_continuous(labels = format_absoluto()) +
+                                scale_y_continuous(labels = format_absoluto()) +
+                                #coord_fixed() +
+                                ggtitle(NULL)
+                        
+                }
+                
+                e
+                
+        }, height = 225)   
         
         
         ## Programas
@@ -423,9 +509,29 @@ server <- shinyServer(function(input, output) {
         
         output$dTable2.1 <- renderDataTable({
                 
-                dataTable2.1()
+                if(input$dimensao_escolhida == "Financeira") {
+                        
+                        a <- formatCurrency(datatable(dataTable2.1(), colnames = c("AR", "Programa", "Tipo do Programa", "Valor Orcado", "Valor Empenhado", "Relacao", "Agrupamento", "Nome do Programa")), 
+                                            columns = c("valor_orcado_total", "valor_empenhado_total"),
+                                            currency = "R$ ",
+                                            dec.mark = ",",
+                                            mark = "\\.")
+                        
+                }
                 
-        })
+                else if(input$dimensao_escolhida == "Fisica") {
+                        
+                        a <- formatCurrency(datatable(dataTable2.1(), colnames = c("AR", "Programa", "Tipo do Programa", "Meta Fisica", "Execucao Fisica", "Relacao", "Agrupamento", "Nome do Programa")), 
+                                            columns = c("meta_fisica_total", "execucao_fisica_total"),
+                                            currency = "",
+                                            dec.mark = ",",
+                                            mark = "\\.")
+                        
+                }
+                
+                a
+                
+        }, height = 270)
         
         
         TextoEstatisticas2.1 <- reactive({
@@ -497,21 +603,195 @@ server <- shinyServer(function(input, output) {
         }, height = 270) 
         
         
+        output$Plot2.2<- renderPlot({
+                
+                q = input$dTable1_rows_selected
+                
+                if(input$dimensao_escolhida == "Financeira") {
+                        
+                        e <- ggplot() +
+                                geom_point(data = dataTable2.1(), aes(x = valor_orcado_total, y = valor_empenhado_total)) +
+                                annotate("segment", x = 0, y = 0, xend = max(dataTable2.1()$valor_orcado_total), yend = max(dataTable2.1()$valor_orcado_total), linetype = 2) +
+                                #geom_line(linetype = 2, aes(x = 1:1000000000, y = 1:1000000000)) +
+                                #geom_point(data = q, x = q$valor_orcado, y = q$valor_empenhado, colour = "red") +
+                                theme_bw() +
+                                ylab("Valor Empenhado") + 
+                                xlab("Valor Orcado") + 
+                                scale_x_continuous(labels = format_real()) +
+                                scale_y_continuous(labels = format_real()) +
+                                theme()
+                        #coord_fixed() +
+                        ggtitle(NULL)
+                        
+                }
+                
+                else if(input$dimensao_escolhida == "Fisica"){
+                        
+                        e <- ggplot(dataTable2.1(), aes(x = meta_fisica_total, y = execucao_fisica_total)) +
+                                annotate("segment", x = 0, y = 0, xend = max(dataTable2.1()$meta_fisica_total), yend = max(dataTable2.1()$meta_fisica_total), linetype = 2) +
+                                geom_point() +
+                                theme_bw() +
+                                ylab("Execucao Fisica") + 
+                                xlab("Meta Fisica") + 
+                                scale_x_continuous(labels = format_absoluto()) +
+                                scale_y_continuous(labels = format_absoluto()) +
+                                #coord_fixed() +
+                                ggtitle(NULL)
+                        
+                }
+                
+                e
+                
+        }, height = 270)
+        
+        
         ## Acoes
         
         
         dataTable3.1 <- reactive({
                 
-                TESTE_filtro3.1(c, input$area_de_resultado, input$tipo_de_programa, input$dimensao_escolhida, input$programa_escolhido)
+                TESTE_filtro3.1(c, input$acao_escolhida, input$dimensao_escolhida)
                 
         })
         
         
         output$dTable3.1 <- renderDataTable({
                 
-                dataTable3.1()
+                if(input$dimensao_escolhida == "Financeira") {
+                        
+                        a <- formatCurrency(datatable(dataTable3.1(), 
+                                                      colnames = c("ARs",
+                                                                   "Programas", 
+                                                                   "Tipo dos Programas", 
+                                                                   "Sub Acoes", "Acao", 
+                                                                   "Valor Orcado", 
+                                                                   "Valor Empenhado", 
+                                                                   "Relacao", 
+                                                                   "Agrupamento", 
+                                                                   "Nome da Acao"),
+                                                      options = list(columnDefs = list(list(
+                                                              targets = c(1,2,3,4),
+                                                              render = JS(
+                                                                      "function(data, type, row, meta) {",
+                                                                      "return type === 'display' && data.length > 20 ?",
+                                                                      "'<span title=\"' + data + '\">' + data.substr(0, 20) + ' (...)</span>' : data;",
+                                                                      "}"))))), 
+                                            columns = c("valor_orcado_total", "valor_empenhado_total"),
+                                            currency = "R$",
+                                            dec.mark = ",",
+                                            mark = "\\.")
+                        
+                }
+                
+                else if(input$dimensao_escolhida == "Fisica") {
+                        
+                        a <- formatCurrency(datatable(dataTable3.1(), 
+                                                      colnames = c("ARs",
+                                                                   "Programas",
+                                                                   "Tipo dos Programas",
+                                                                   "Sub Acoes",
+                                                                   "Acao",
+                                                                   "Meta Fisica",
+                                                                   "Execucao Fisica",
+                                                                   "Relacao",
+                                                                   "Agrupamento",
+                                                                   "Nome da Acao"),
+                                                      options = list(columnDefs = list(list(
+                                                              targets = c(1,2,3,4),
+                                                              render = JS(
+                                                                      "function(data, type, row, meta) {",
+                                                                      "return type === 'display' && data.length > 20 ?",
+                                                                      "'<span title=\"' + data + '\">' + data.substr(0, 20) + ' (...)</span>' : data;",
+                                                                      "}"))))),  
+                                            columns = c("meta_fisica_total", "execucao_fisica_total"),
+                                            currency = "",
+                                            dec.mark = ",",
+                                            mark = "\\.")
+                        
+                }
+                
+                a
                 
         })
+        
+        
+        output$Plot3.1<- renderPlot({
+                
+                if(input$dimensao_escolhida == "Financeira") {
+                        
+                        w <- ggplot(dataTable3.1(), aes(x = relacao_financeira_total_agrupamento)) + 
+                                geom_bar(colour = "black", 
+                                         fill = "white", 
+                                         aes(y = ..count..)) +
+                                theme_bw() +
+                                ylab(NULL) + 
+                                xlab(NULL) + 
+                                ggtitle(NULL) +
+                                theme(axis.text.y = element_blank(),
+                                      axis.ticks.y  = element_blank())
+                        
+                }
+                
+                else if(input$dimensao_escolhida == "Fisica"){
+                        
+                        w <- ggplot(dataTable2.1(), aes(x = relacao_fisica_total_agrupamento)) + 
+                                geom_bar(colour = "black", 
+                                         fill = "white", 
+                                         aes(y = ..count..)) +
+                                theme_bw() +
+                                ylab(NULL) + 
+                                xlab(NULL) + 
+                                ggtitle(NULL) +
+                                theme(axis.text.y = element_blank(),
+                                      axis.ticks.y  = element_blank())
+                        
+                }
+                
+                w
+                
+        }, height = 270) 
+        
+        
+        output$Plot3.2<- renderPlot({
+                
+                q = input$dTable1_rows_selected
+                
+                if(input$dimensao_escolhida == "Financeira") {
+                        
+                        e <- ggplot() +
+                                geom_point(data = dataTable3.1(), aes(x = valor_orcado_total, y = valor_empenhado_total)) +
+                                annotate("segment", x = 0, y = 0, xend = max(dataTable3.1()$valor_orcado_total), yend = max(dataTable3.1()$valor_orcado_total), linetype = 2) +
+                                #geom_line(linetype = 2, aes(x = 1:1000000000, y = 1:1000000000)) +
+                                #geom_point(data = q, x = q$valor_orcado, y = q$valor_empenhado, colour = "red") +
+                                theme_bw() +
+                                ylab("Valor Empenhado") + 
+                                xlab("Valor Orcado") + 
+                                scale_x_continuous(labels = format_real()) +
+                                scale_y_continuous(labels = format_real()) +
+                                theme()
+                        #coord_fixed() +
+                        ggtitle(NULL)
+                        
+                }
+                
+                else if(input$dimensao_escolhida == "Fisica"){
+                        
+                        e <- ggplot(dataTable3.1(), aes(x = meta_fisica_total, y = execucao_fisica_total)) +
+                                annotate("segment", x = 0, y = 0, xend = max(dataTable3.1()$meta_fisica_total), yend = max(dataTable3.1()$meta_fisica_total), linetype = 2) +
+                                geom_point() +
+                                theme_bw() +
+                                ylab("Execucao Fisica") + 
+                                xlab("Meta Fisica") + 
+                                scale_x_continuous(labels = format_absoluto()) +
+                                scale_y_continuous(labels = format_absoluto()) +
+                                #coord_fixed() +
+                                ggtitle(NULL)
+                        
+                }
+                
+                e
+                
+        }, height = 270)
         
         
 })
@@ -520,3 +800,4 @@ server <- shinyServer(function(input, output) {
 shinyApp(ui = ui, server = server)
 
 ## https://github.com/Xiaodan/Coursera-Developing-Data-Products/tree/master/project
+## https://rstudio.github.io/DT/shiny.html
