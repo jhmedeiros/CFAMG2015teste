@@ -7,7 +7,6 @@ library(plyr)
 library(DT)
 library(gtools)
 library(scales)
-library(cowplot)
 options(scipen = 999)
 
 
@@ -83,13 +82,20 @@ tretosa <- function(x){
 }
 
 
+tretosa2 <- function(x){
+        
+        sum(as.numeric(x))
+        
+}
+
+
 ## Ler e Preparar Planilhas
 
 # Planilha Bruta
 
 
-a0 <- read.csv("D:/Trabalho/TCE/Teste API/TesteAPI/data/Planilha Subacoes2.csv")
-#a0 <- read.csv("D:/Users/joao.medeiros/Documents/Teste2015/data/Planilha Subacoes2.csv")
+#a0 <- read.csv("D:/Trabalho/TCE/Teste API/TesteAPI/data/Planilha Subacoes2.csv")
+a0 <- read.csv("D:/Users/joao.medeiros/Documents/Teste2015/data/Planilha Subacoes2.csv")
 
 levels(a0$relacao_fisica_agrupamento) <- c("0.01 a 0.4", "0.4 a 0.7", "0.7 a 1.3", "1.3 a 2.0", "Acima de 2.0", "Nao ha execucao", "Nao ha meta")
 levels(a0$relacao_financeira_agrupamento) <- c("0.01 a 0.4", "0.4 a 0.7", "0.7 a 1.3", "1.3 a 2.0", "Acima de 2.0", "Nao ha execucao", "Nao ha meta")
@@ -98,7 +104,7 @@ a0$X <- NULL
 
 # Planilha Sub-Acoes
 
-a <- a0[, c(1:12, 14, 20)]
+a <- a0[, c(1:12, 14, 20, 15)]
 
 
 # Planilha Programas
@@ -208,6 +214,61 @@ c$relacao_fisica_total_agrupamento <- cut(c$relacao_fisica_total,
 c <- c[, c(6, 7, 8, 10, 1, 2, 3, 11, 13, 4, 5, 12, 14, 9)]
 
 
+# Planilha UO
+
+d.1 <- a0
+
+d <- aggregate(list(d.1$valor_orcado, 
+                    d.1$valor_empenhado, 
+                    d.1$quantificacao_meta, 
+                    d.1$quantificacao_executada),
+               by = list(d.1$nome_uo),
+               FUN = tretosa2)
+
+colnames(d) <- c("unidade_orcamentaria", "valor_orcado_total", "valor_empenhado_total","meta_fisica_total", "execucao_fisica_total")
+
+darea_resultado <- aggregate(list(d.1$area_resultado,
+                                  d.1$programa,
+                                  d.1$programa_tipo,
+                                  d.1$acao,
+                                  d.1$sub_acao),
+                             by = list(d.1$nome_uo),
+                             FUN = tretosa)
+
+
+colnames(darea_resultado) <- c("unidade_orcamentaria", "area_resultado", "programa", "programa_tipo", "nome_acao", "sub_acoes")
+
+d <- merge(d, darea_resultado)
+
+d <- mutate(d, relacao_financeira_total = valor_empenhado_total/valor_orcado_total, relacao_fisica_total = execucao_fisica_total/meta_fisica_total)
+
+d$relacao_fisica_total[is.nan(d$relacao_fisica_total)] <- -1
+d$relacao_financeira_total[is.nan(d$relacao_financeira_total)] <- -1
+
+intervals <- c(-1.1,-0.9, 0.0001, 0.4001, 0.7001, 1.30001, 2.00001, 500)
+
+d$relacao_financeira_total_agrupamento <- cut(d$relacao_financeira_total, 
+                                              breaks = intervals,
+                                              labels = c("Nao ha meta",
+                                                         "Nao ha execucao",
+                                                         "0.01 a 0.4", 
+                                                         "0.4 a 0.7", 
+                                                         "0.7 a 1.3", 
+                                                         "1.3 a 2.0", 
+                                                         "Acima de 2.0"))
+
+d$relacao_fisica_total_agrupamento <- cut(d$relacao_fisica_total, 
+                                          breaks = intervals,
+                                          labels = c("Nao ha meta",
+                                                     "Nao ha execucao",
+                                                     "0.01 a 0.4", 
+                                                     "0.4 a 0.7", 
+                                                     "0.7 a 1.3", 
+                                                     "1.3 a 2.0", 
+                                                     "Acima de 2.0"))
+
+d <- d[, c(1, 6, 7, 8, 9, 10, 2, 3, 11, 13, 4, 5, 12, 14)]
+
 ## Funcoes
 
 
@@ -260,6 +321,7 @@ TESTE_filtro1.2 <- function(a, programa_escolhido) {
         
 }
 
+
 TESTE_filtro1.3 <- function(a, acao_escolhida) {
         
         
@@ -270,6 +332,24 @@ TESTE_filtro1.3 <- function(a, acao_escolhida) {
         
 }
 
+
+TESTE_filtro1.4 <- function(a, TRETA_escolhida, UO_escolhida) {
+        
+        if(TRETA_escolhida == 0) {
+                
+                b <- a
+                
+        }
+        
+        else if(TRETA_escolhida == 1) {
+                
+                b <- a %>% filter(nome_uo %in% UO_escolhida)
+        
+        }
+        
+        b
+        
+}
 
 
 TESTE_MinhasTretas1.1 <- function(a, area_de_resultado, tipo_de_programa, dimensao_escolhida, programa_escolhido, acao_escolhida) {
@@ -334,14 +414,8 @@ TESTE_MinhasTretas1.1 <- function(a, area_de_resultado, tipo_de_programa, dimens
 }
 
 
-TESTE_MinhasTretas1.2 <- function(a, area_de_resultado, tipo_de_programa, dimensao_escolhida, programa_escolhido, acao_escolhida) {
+TESTE_MinhasTretas1.2 <- function(a, b, dimensao_escolhida) {
         
-        b <- a
-        
-        a <- a %>% filter(area_resultado %in% area_de_resultado,
-                          programa_tipo %in% tipo_de_programa,
-                          programa %in% programa_escolhido,
-                          acao %in% acao_escolhida)
         
         if(dimensao_escolhida == "Financeira") {
                 
@@ -362,13 +436,6 @@ TESTE_MinhasTretas1.2 <- function(a, area_de_resultado, tipo_de_programa, dimens
         }
         
         else if(dimensao_escolhida == "Fisica") {
-                
-                
-                resultado <- a %>% filter(area_resultado %in% area_de_resultado,
-                                          programa_tipo %in% tipo_de_programa,
-                                          programa %in% programa_escolhido)
-                
-                resultado <- resultado[, -c(10, 11, 12, 13)]
                 
                 Atot <- nrow(a)
                 Btot1114 <- nrow(b)
@@ -563,5 +630,66 @@ TESTE_filtro3.1 <- function(a, acao_escolhida, dimensao_escolhida) {
         
         print(resultado3)
         
+        
+}
+
+
+# Funcoes UO
+
+
+TESTE_filtro4.1 <- function(a, dimensao_escolhida, TRETA_escolhida, UO_escolhida) {
+        
+        if(TRETA_escolhida == 1) {
+
+                resultado4 <- a %>% filter(unidade_orcamentaria %in% UO_escolhida)
+                
+                
+                if(dimensao_escolhida == "Financeira") {
+                        
+                        resultado4 <- resultado4[, -c(11, 12, 13, 14)]
+                        #resultado3$valor_orcado_total <- format_real() (resultado3$valor_orcado_total)
+                        #resultado3$valor_empenhado_total <- format_real() (resultado3$valor_empenhado_total)
+                        resultado4$relacao_financeira_total <- round(resultado4$relacao_financeira_total, 4)
+                        
+                }
+                
+                else if(dimensao_escolhida == "Fisica") {
+                        
+                        resultado4 <- resultado4[, -c(7, 8, 9, 10)]
+                        #resultado3$meta_fisica_total <- format_absoluto() (resultado3$meta_fisica_total)
+                        #resultado3$execucao_fisica_total <- format_absoluto() (resultado3$execucao_fisica_total)
+                        resultado4$relacao_fisica_total <- round(resultado4$relacao_fisica_total, 4)
+                        
+                }
+                
+                print(resultado4)
+                
+        }
+        
+        if(TRETA_escolhida == 0) {
+                
+                resultado4 <- a
+                
+                if(dimensao_escolhida == "Financeira") {
+                        
+                        resultado4 <- resultado4[, -c(11, 12, 13, 14)]
+                        #resultado3$valor_orcado_total <- format_real() (resultado3$valor_orcado_total)
+                        #resultado3$valor_empenhado_total <- format_real() (resultado3$valor_empenhado_total)
+                        resultado4$relacao_financeira_total <- round(resultado4$relacao_financeira_total, 4)
+                        
+                }
+                
+                else if(dimensao_escolhida == "Fisica") {
+                        
+                        resultado4 <- resultado4[, -c(7, 8, 9, 10)]
+                        #resultado3$meta_fisica_total <- format_absoluto() (resultado3$meta_fisica_total)
+                        #resultado3$execucao_fisica_total <- format_absoluto() (resultado3$execucao_fisica_total)
+                        resultado4$relacao_fisica_total <- round(resultado4$relacao_fisica_total, 4)
+                        
+                }
+                
+                print(resultado4)
+                
+        }
         
 }
